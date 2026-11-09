@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "id": "/?pos=standalone",
+  "name": "GastroPOS - Sistem Kasir Restoran",
+  "short_name": "GastroPOS",
+  "description": "Sistem POS Kasir, Antrian Dapur & Back-Office Restoran Standalone dan Offline-First",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#ea580c",
+  "categories": [
+    "business",
+    "food",
+    "productivity",
+    "utilities"
+  ],
+  "lang": "id-ID",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Kasir POS",
+      "short_name": "Kasir",
+      "description": "Buka antarmuka kasir penjualan makanan & minuman",
+      "url": "/?source=shortcut_pos",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Layar Dapur (KDS)",
+      "short_name": "Dapur",
+      "description": "Buka tiket antrian pesanan dapur restoran",
+      "url": "/?source=shortcut_kitchen",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Back-Office Admin",
+      "short_name": "Admin",
+      "description": "Buka dashboard manajemen resto, menu, dan stok",
+      "url": "/?source=shortcut_admin",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="pwa-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <filter id="pwa-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#pwa-grad)"/>
+  <g filter="url(#pwa-shadow)" fill="#ffffff">
+    <!-- Utensil: Fork -->
+    <path d="M160 120 v75 c0 22 14 40 34 46 v135 c0 8 6 14 14 14 h2 c8 0 14-6 14-14 V241 c20-6 34-24 34-46 v-75 c0-7-5-12-12-12 s-12 5-12 12 v60 h-14 v-60 c0-7-5-12-12-12 s-12 5-12 12 v60 h-14 v-60 c0-7-5-12-12-12 s-12 5-12 12 z"/>
+    <!-- Utensil: Knife -->
+    <path d="M305 120 c-7 0-12 5-12 12 v118 c0 22 14 40 34 46 v90 c0 8 6 14 14 14 h2 c8 0 14-6 14-14 V134 c0-8-7-14-15-14 c-25 0-32 0-37 0 z"/>
+    <!-- Serving Plate base curve -->
+    <rect x="180" y="405" width="152" height="18" rx="9" fill="#ffffff" opacity="0.85"/>
+  </g>
+</svg>
