@@ -200,6 +200,16 @@ src/
 
 ## 7. Log Pembaruan Fitur (Changelog)
 
+### Versi 1.7.0 (Inisialisasi Git & Publikasi ke GitHub Repository)
+1. **Inisialisasi & Konfigurasi Git:**
+   - Menginisialisasi repositori Git lokal dengan cabang utama `main`.
+   - Mengonfigurasi [`.gitignore`](file:///d:/Gemoelai/POS/.gitignore) untuk mengamankan file environment lokal (`.env`, `.env.*`) serta mengabaikan `node_modules` dan `dist`.
+   - Menyediakan template environment publik pada [`.env.example`](file:///d:/Gemoelai/POS/.env.example).
+2. **Publikasi ke GitHub Remote:**
+   - Menghubungkan remote origin ke repositori GitHub: [`https://github.com/arsyarid1/g-pos`](https://github.com/arsyarid1/g-pos).
+   - Melakukan commit perdana menyeluruh (*Full suite POS, KDS, PWA, Cloudflare ready, Supabase integration*) dan berhasil push ke branch `main`.
+   - Repositori kini siap disambungkan secara langsung ke **Cloudflare Pages** untuk *automated CI/CD deployment*.
+
 ### Versi 1.6.2 (Pembersihan Tuntas Cache Demo, Verifikasi Supabase & Kesiapan Cloudflare Pages)
 1. **Solusi Mengapa Data Demo Sempat Masih Muncul:**
    - **Penyebab:** Service Worker PWA sebelumnya mencache bundel JavaScript lama di browser. Saat halaman dibuka, browser menjalankan script lama yang masih memuat data template awal.
