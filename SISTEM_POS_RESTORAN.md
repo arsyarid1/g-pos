@@ -303,6 +303,21 @@ src/
      - 🔒 **"Keluar"** ➔ Mengunci sesi admin dan kembali ke halaman login.
    - Saat Admin berada di layar Kasir atau Dapur, tersedia tombol **"Kembali ke Admin"** untuk kembali ke Back-Office tanpa perlu memasukkan PIN ulang.
 
+### Versi 1.8.0 (Sinkronisasi Real-Time Multi-Device Berbasis Supabase WebSocket)
+1. **Engine Supabase Realtime Channels (`src/services/syncService.ts`):**
+   - Menghubungkan aplikasi ke channel WebSocket Supabase `pos-multi-device-sync`.
+   - Setiap perubahan data di satu perangkat (Device 1) langsung memicu broadcast ke semua perangkat lainnya (Device 2, Layar Dapur, Tablet Kasir, Monitor Admin) dalam hitungan milidetik.
+   - Tabel yang terhubung secara realtime:
+     - `products`: Tambah, ubah harga/nama/foto/varian, atau hapus menu langsung tersinkron seketika.
+     - `orders`: Pesanan dari Kasir langsung muncul di Layar Dapur tanpa reload. Perubahan status masak di dapur (`cooking`/`ready`) langsung terupdate di kasir.
+     - `ingredients`: Pengurangan stok bahan baku otomatis langsung terpantau di semua perangkat.
+     - `restaurant_settings`: Perubahan logo/nama restoran langsung tercermin di semua layar.
+2. **Penyelarasan Skema Kolom Supabase (`supabase-schema.sql`):**
+   - Menambahkan kolom `image_url`, `description`, `has_variants`, `variants`, `created_at` pada tabel `products`.
+   - Menambahkan kolom `customer_name`, `subtotal`, `tax`, `kitchen_status`, `amount_paid`, `change_amount`, `items` (JSONB) pada tabel `orders`.
+   - Menambahkan kolom `variant_id`, `variant_name`, `subtotal` pada tabel `order_items`.
+   - Mendaftarkan tabel ke publication `supabase_realtime`.
+
 ### Versi 1.7.1 (Perbaikan Keamanan Supabase Browser: Mengatasi Error Forbidden Secret API)
 1. **Pemisahan Kunci Supabase Browser vs Secret Key (`src/lib/supabase.ts` & `.env`):**
    - Mengatasi error HTTP 403 `forbidden use of secret API` yang muncul saat browser mengirimkan `sb_secret_...` di header API.

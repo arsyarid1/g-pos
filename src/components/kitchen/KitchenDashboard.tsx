@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
+import { syncService } from '../../services/syncService';
 import type { LocalOrder, KitchenStatus, RestaurantSettings, StaffUser } from '../../types';
 import { InventoryView } from '../admin/InventoryView';
 import {
@@ -67,10 +68,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   // Update status memasak tiket pesanan
   const handleUpdateStatus = async (orderId: string, nextStatus: KitchenStatus) => {
     try {
-      await db.orders.update(orderId, {
-        kitchen_status: nextStatus,
-        updated_at: new Date().toISOString(),
-      });
+      await syncService.updateKitchenStatus(orderId, nextStatus);
     } catch (err) {
       console.error('Error updating kitchen status:', err);
     }

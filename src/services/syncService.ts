@@ -11,7 +11,10 @@ import type {
   ProductRecipe,
   StaffUser,
   SyncStats,
+  LocalOrder,
+  KitchenStatus,
 } from '../types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 type SyncListener = (stats: SyncStats) => void;
 
@@ -24,6 +27,7 @@ class SyncService {
   private lastError: string | null = null;
   private listeners: Set<SyncListener> = new Set();
   private timerId: number | null = null;
+  private realtimeChannel: RealtimeChannel | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -36,12 +40,15 @@ class SyncService {
         this.notify();
       });
 
-      // Polling setiap 30 detik jika online
+      // Polling background fallback setiap 20 detik jika online
       this.timerId = window.setInterval(() => {
         if (navigator.onLine && !this.isSyncing) {
           this.syncAll();
         }
-      }, 30000);
+      }, 20000);
+
+      // Inisialisasi Realtime WebSocket untuk multi-device
+      this.initRealtime();
     }
   }
 
@@ -78,6 +85,154 @@ class SyncService {
   }
 
   /**
+   * Menginisialisasi Supabase Realtime WebSocket Channels
+   * Mengalirkan perubahan data antar-device (Kasir, Dapur, Admin) dalam milidetik.
+   */
+  public initRealtime() {
+    if (!isSupabaseConfigured || !supabase) return;
+    if (this.realtimeChannel) {
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+
+    try {
+      this.realtimeChannel = supabase
+        .channel('pos-multi-device-sync')
+        // 1. Realtime Products (Katalog Menu)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'products' },
+          async (payload) => {
+            const oldItem = payload.old as any;
+            const item = payload.new as any;
+            if (payload.eventType === 'DELETE') {
+              if (oldItem?.id) {
+                await db.products.delete(oldItem.id);
+                await db.recipes.where('product_id').equals(oldItem.id).delete();
+              }
+            } else if (item && item.id) {
+              const formatted: LocalProduct = {
+                id: item.id,
+                name: item.name,
+                category: item.category,
+                price: Number(item.price),
+                image_url: item.image_url || undefined,
+                description: item.description || undefined,
+                is_active: item.is_active ?? true,
+                has_variants: Boolean(item.has_variants),
+                variants: Array.isArray(item.variants) ? item.variants : undefined,
+                created_at: item.created_at || new Date().toISOString(),
+                updated_at: item.updated_at || new Date().toISOString(),
+              };
+              await db.products.put(formatted);
+            }
+          }
+        )
+        // 2. Realtime Orders (Kasir & Layar Dapur)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          async (payload) => {
+            const oldRow = payload.old as any;
+            const row = payload.new as any;
+            if (payload.eventType === 'DELETE') {
+              if (oldRow?.id) {
+                await db.orders.delete(oldRow.id);
+              }
+            } else if (row && row.id) {
+              const existing = await db.orders.get(row.id);
+              const items = Array.isArray(row.items) && row.items.length > 0
+                ? row.items
+                : (existing?.items || []);
+
+              const formattedOrder: LocalOrder = {
+                id: row.id,
+                invoice_number: row.invoice_number,
+                order_type: row.order_type || 'dine_in',
+                table_number: row.table_number || null,
+                customer_name: row.customer_name || null,
+                items,
+                subtotal: Number(row.subtotal || row.total_amount || 0),
+                tax: Number(row.tax || 0),
+                total: Number(row.total_amount || 0),
+                payment_method: row.payment_method || 'cash',
+                amount_paid: Number(row.amount_paid || row.total_amount || 0),
+                change_amount: Number(row.change_amount || 0),
+                kitchen_status: (row.kitchen_status as KitchenStatus) || 'pending',
+                sync_status: 'synced',
+                created_at: row.created_at || new Date().toISOString(),
+                updated_at: row.updated_at || new Date().toISOString(),
+              };
+              await db.orders.put(formattedOrder);
+            }
+          }
+        )
+        // 3. Realtime Ingredients (Stok Bahan Baku)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'ingredients' },
+          async (payload) => {
+            const oldRow = payload.old as any;
+            const row = payload.new as any;
+            if (payload.eventType === 'DELETE') {
+              if (oldRow?.id) {
+                await db.ingredients.delete(oldRow.id);
+              }
+            } else if (row && row.id) {
+              const formatted: Ingredient = {
+                id: row.id,
+                name: row.name,
+                unit: row.unit || 'gram',
+                current_stock: Number(row.current_stock || 0),
+                min_stock_alert: Number(row.min_stock_alert || 0),
+                cost_per_unit: Number(row.cost_per_unit || 0),
+                updated_at: row.updated_at || new Date().toISOString(),
+              };
+              await db.ingredients.put(formatted);
+            }
+          }
+        )
+        // 4. Realtime Settings (Identitas & Brand)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'restaurant_settings' },
+          async (payload) => {
+            const d = payload.new as any;
+            if (d && d.name) {
+              const settings: RestaurantSettings = {
+                id: 'default_settings',
+                name: d.name || DEFAULT_SETTINGS.name,
+                tagline: d.tagline || '',
+                address: d.address || '',
+                phone: d.phone || '',
+                logo_url: d.logo_url || '',
+                receipt_footer: d.footer_message || d.receipt_footer || DEFAULT_SETTINGS.receipt_footer,
+                tax_percentage: Number(d.tax_percentage) ?? 10,
+                updated_at: d.updated_at || new Date().toISOString(),
+              };
+              await db.settings.put(settings);
+            }
+          }
+        )
+        // 5. Realtime Staff (Karyawan & Akses)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'staff' },
+          async () => {
+            await this.syncStaff();
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Realtime] Terhubung ke Supabase Realtime channel.');
+          }
+        });
+    } catch (err) {
+      console.warn('[Realtime] Gagal menginisialisasi realtime subscription:', err);
+    }
+  }
+
+  /**
    * 1. pullSettings(): Ambil konfigurasi resto dari Supabase
    */
   public async pullSettings(): Promise<void> {
@@ -110,7 +265,6 @@ class SyncService {
         };
         await db.settings.put(settings);
       } else {
-        // Jika belum ada di Supabase, push data lokal default
         const localSettings = await db.settings.get('default_settings');
         if (localSettings) {
           await this.pushSettings(localSettings);
@@ -149,7 +303,7 @@ class SyncService {
   }
 
   /**
-   * 2. pullProducts(): Sinkronisasi katalog menu dari Supabase
+   * 2. pullProducts(): Sinkronisasi katalog menu dari Supabase ke lokal Dexie
    */
   public async pullProducts(): Promise<void> {
     try {
@@ -168,29 +322,36 @@ class SyncService {
       }
 
       if (data && data.length > 0) {
-        const localProducts = await db.products.toArray();
-        const localMap = new Map(localProducts.map((p) => [p.id, p]));
+        const remoteIds = new Set(data.map((d) => d.id));
+        const formatted: LocalProduct[] = data.map((item) => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          price: Number(item.price),
+          image_url: item.image_url || undefined,
+          description: item.description || undefined,
+          is_active: item.is_active ?? true,
+          has_variants: Boolean(item.has_variants),
+          variants: Array.isArray(item.variants) ? item.variants : undefined,
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at || new Date().toISOString(),
+        }));
 
-        const formatted: LocalProduct[] = data.map((item) => {
-          const existing = localMap.get(item.id);
-          return {
-            id: item.id,
-            name: item.name,
-            category: item.category,
-            price: Number(item.price),
-            image_url: item.image_url || existing?.image_url || '',
-            description: item.description || existing?.description || '',
-            is_active: item.is_active ?? true,
-            has_variants: existing?.has_variants ?? false,
-            variants: existing?.variants ?? [],
-            created_at: item.created_at || existing?.created_at,
-            updated_at: item.updated_at || new Date().toISOString(),
-          };
-        });
+        // Simpan data remote ke Dexie lokal
         await db.products.bulkPut(formatted);
+
+        // Hapus produk lokal yang sudah tidak ada di remote Supabase
+        const allLocals = await db.products.toArray();
+        const toDelete = allLocals.filter((p) => !remoteIds.has(p.id)).map((p) => p.id);
+        if (toDelete.length > 0) {
+          await db.products.bulkDelete(toDelete);
+        }
       } else {
-        // Jika di Supabase belum ada data produk, upload produk bawaan lokal
-        await this.pushProducts();
+        // Jika di Supabase belum ada data produk, upload produk bawaan lokal jika ada
+        const localProducts = await db.products.toArray();
+        if (localProducts.length > 0) {
+          await this.pushProducts();
+        }
       }
     } catch (err: any) {
       console.warn('[Sync] Pull products catch error:', err?.message || err);
@@ -198,7 +359,59 @@ class SyncService {
   }
 
   /**
-   * 3. pushProducts(): Kirim produk lokal ke Supabase
+   * 3. saveProduct(): Simpan atau perbarui menu tunggal secara instan ke Dexie & Supabase
+   */
+  public async saveProduct(product: LocalProduct): Promise<void> {
+    // 1. Simpan ke database lokal browser
+    await db.products.put(product);
+
+    // 2. Kirim ke Supabase jika online
+    if (isSupabaseConfigured && supabase && navigator.onLine) {
+      try {
+        const payload = {
+          id: product.id,
+          name: product.name,
+          category: product.category,
+          price: product.price,
+          image_url: product.image_url || null,
+          description: product.description || null,
+          is_active: product.is_active ?? true,
+          has_variants: Boolean(product.has_variants),
+          variants: product.variants || [],
+          created_at: product.created_at || new Date().toISOString(),
+          updated_at: product.updated_at || new Date().toISOString(),
+        };
+        const { error } = await supabase.from('products').upsert(payload);
+        if (error) {
+          console.error('[Sync] Gagal simpan menu ke Supabase:', error.message);
+        }
+      } catch (err) {
+        console.warn('[Sync] Gagal push produk ke Supabase:', err);
+      }
+    }
+  }
+
+  /**
+   * 4. deleteProduct(): Hapus menu dari Dexie & Supabase secara permanen
+   */
+  public async deleteProduct(productId: string): Promise<void> {
+    await db.products.delete(productId);
+    await db.recipes.where('product_id').equals(productId).delete();
+
+    if (isSupabaseConfigured && supabase && navigator.onLine) {
+      try {
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if (error) {
+          console.warn('[Sync] Gagal hapus produk di Supabase:', error.message);
+        }
+      } catch (err) {
+        console.warn('[Sync] Gagal request delete produk ke Supabase:', err);
+      }
+    }
+  }
+
+  /**
+   * 5. pushProducts(): Kirim seluruh produk lokal ke Supabase
    */
   public async pushProducts(): Promise<void> {
     if (!isSupabaseConfigured || !supabase || !navigator.onLine) return;
@@ -211,23 +424,110 @@ class SyncService {
         name: p.name,
         category: p.category,
         price: p.price,
+        image_url: p.image_url || null,
+        description: p.description || null,
         is_active: p.is_active ?? true,
+        has_variants: Boolean(p.has_variants),
+        variants: p.variants || [],
+        created_at: p.created_at || new Date().toISOString(),
         updated_at: p.updated_at || new Date().toISOString(),
       }));
 
-      await supabase.from('products').upsert(payload);
+      const { error } = await supabase.from('products').upsert(payload);
+      if (error) {
+        console.warn('[Sync] Push products Supabase error:', error.message);
+      }
     } catch (err) {
       console.warn('[Sync] Push products warning:', err);
     }
   }
 
   /**
-   * 4. syncIngredients(): Sinkronisasi Master Bahan Baku
+   * 6. pullOrders(): Menarik riwayat transaksi dari Supabase ke Dexie lokal
+   * Sangat krusial agar Layar Dapur atau Tablet Kasir lain menerima order real-time.
+   */
+  public async pullOrders(): Promise<void> {
+    if (!isSupabaseConfigured || !supabase || !navigator.onLine) return;
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) {
+        console.warn('[Sync] Pull orders error:', error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const existingOrders = await db.orders.toArray();
+        const existingMap = new Map(existingOrders.map((o) => [o.id, o]));
+
+        const formattedOrders: LocalOrder[] = data.map((row) => {
+          const localMatch = existingMap.get(row.id);
+          const items = Array.isArray(row.items) && row.items.length > 0
+            ? row.items
+            : (localMatch?.items || []);
+
+          return {
+            id: row.id,
+            invoice_number: row.invoice_number,
+            order_type: row.order_type || 'dine_in',
+            table_number: row.table_number || null,
+            customer_name: row.customer_name || null,
+            items,
+            subtotal: Number(row.subtotal || row.total_amount || 0),
+            tax: Number(row.tax || 0),
+            total: Number(row.total_amount || 0),
+            payment_method: row.payment_method || 'cash',
+            amount_paid: Number(row.amount_paid || row.total_amount || 0),
+            change_amount: Number(row.change_amount || 0),
+            kitchen_status: (row.kitchen_status as KitchenStatus) || 'pending',
+            sync_status: 'synced',
+            created_at: row.created_at || new Date().toISOString(),
+            updated_at: row.updated_at || new Date().toISOString(),
+          };
+        });
+
+        await db.orders.bulkPut(formattedOrders);
+      }
+    } catch (err) {
+      console.warn('[Sync] Pull orders catch:', err);
+    }
+  }
+
+  /**
+   * 7. updateKitchenStatus(): Mengubah status pesanan dapur dan sinkronisasi ke Supabase
+   */
+  public async updateKitchenStatus(orderId: string, kitchen_status: KitchenStatus): Promise<void> {
+    const nowIso = new Date().toISOString();
+    await db.orders.update(orderId, {
+      kitchen_status,
+      updated_at: nowIso,
+    });
+
+    if (isSupabaseConfigured && supabase && navigator.onLine) {
+      try {
+        await supabase
+          .from('orders')
+          .update({
+            kitchen_status,
+            updated_at: nowIso,
+          })
+          .eq('id', orderId);
+      } catch (err) {
+        console.warn('[Sync] Gagal update kitchen status di Supabase:', err);
+      }
+    }
+  }
+
+  /**
+   * 8. syncIngredients(): Sinkronisasi Master Bahan Baku
    */
   public async syncIngredients(): Promise<void> {
     if (!isSupabaseConfigured || !supabase || !navigator.onLine) return;
     try {
-      // Pull
       const { data, error } = await supabase.from('ingredients').select('*');
       if (!error && data && data.length > 0) {
         const formatted: Ingredient[] = data.map((d) => ({
@@ -241,7 +541,6 @@ class SyncService {
         }));
         await db.ingredients.bulkPut(formatted);
       } else {
-        // Push local if cloud empty
         const locals = await db.ingredients.toArray();
         if (locals.length > 0) {
           await supabase.from('ingredients').upsert(locals);
@@ -253,7 +552,7 @@ class SyncService {
   }
 
   /**
-   * 5. syncRecipes(): Sinkronisasi BOM / Resep Menu
+   * 9. syncRecipes(): Sinkronisasi BOM / Resep Menu
    */
   public async syncRecipes(): Promise<void> {
     if (!isSupabaseConfigured || !supabase || !navigator.onLine) return;
@@ -285,16 +584,14 @@ class SyncService {
   }
 
   /**
-   * 6. syncStaff(): Sinkronisasi Data Staf & PIN
+   * 10. syncStaff(): Sinkronisasi Data Staf & PIN
    */
   public async syncStaff(): Promise<void> {
     if (!isSupabaseConfigured || !supabase || !navigator.onLine) return;
     try {
       const { data, error } = await supabase.from('staff').select('*');
-      if (error) {
-        // Jika table staff belum ada di Supabase, lewati dengan aman
-        return;
-      }
+      if (error) return;
+
       if (data && data.length > 0) {
         const formatted: StaffUser[] = data.map((s) => ({
           id: s.id,
@@ -317,15 +614,11 @@ class SyncService {
   }
 
   /**
-   * 7. pushOrders(): Mengambil order dengan sync_status pending atau failed
+   * 11. pushOrders(): Mengambil order dengan sync_status pending atau failed
    * dan mengirimkannya ke Supabase (orders & order_items) serta sinkronkan sisa stok
    */
   public async pushOrders(): Promise<number> {
-    if (!isSupabaseConfigured || !supabase) {
-      return 0;
-    }
-
-    if (!navigator.onLine) {
+    if (!isSupabaseConfigured || !supabase || !navigator.onLine) {
       return 0;
     }
 
@@ -343,10 +636,18 @@ class SyncService {
       invoice_number: order.invoice_number,
       order_type: order.order_type,
       table_number: order.table_number || null,
+      customer_name: order.customer_name || null,
+      subtotal: order.subtotal,
+      tax: order.tax,
       total_amount: order.total,
       payment_method: order.payment_method,
       payment_status: 'paid',
+      amount_paid: order.amount_paid,
+      change_amount: order.change_amount,
+      kitchen_status: order.kitchen_status || 'pending',
+      items: order.items || [],
       created_at: order.created_at || new Date().toISOString(),
+      updated_at: order.updated_at || new Date().toISOString(),
     }));
 
     const orderItemsPayload = ordersToSync.flatMap((order) =>
@@ -357,8 +658,11 @@ class SyncService {
         product_name: item.variant_name
           ? `${item.product_name} (${item.variant_name})`
           : item.product_name,
+        variant_id: item.variant_id || null,
+        variant_name: item.variant_name || null,
         price: item.unit_price,
         qty: item.quantity,
+        subtotal: item.subtotal || item.unit_price * item.quantity,
         notes: item.notes || null,
       }))
     );
@@ -437,10 +741,18 @@ class SyncService {
         invoice_number: order.invoice_number,
         order_type: order.order_type,
         table_number: order.table_number || null,
+        customer_name: order.customer_name || null,
+        subtotal: order.subtotal,
+        tax: order.tax,
         total_amount: order.total,
         payment_method: order.payment_method,
         payment_status: 'paid',
+        amount_paid: order.amount_paid,
+        change_amount: order.change_amount,
+        kitchen_status: order.kitchen_status || 'pending',
+        items: order.items || [],
         created_at: order.created_at || new Date().toISOString(),
+        updated_at: order.updated_at || new Date().toISOString(),
       };
 
       const itemsPayload = order.items.map((item) => ({
@@ -450,8 +762,11 @@ class SyncService {
         product_name: item.variant_name
           ? `${item.product_name} (${item.variant_name})`
           : item.product_name,
+        variant_id: item.variant_id || null,
+        variant_name: item.variant_name || null,
         price: item.unit_price,
         qty: item.quantity,
+        subtotal: item.subtotal || item.unit_price * item.quantity,
         notes: item.notes || null,
       }));
 
@@ -496,13 +811,13 @@ class SyncService {
 
     let pushed = 0;
     try {
-      // Pastikan data lokal terinisialisasi
       await ensureAllInitialData();
 
       if (navigator.onLine) {
         await Promise.all([
           this.pullSettings(),
           this.pullProducts(),
+          this.pullOrders(),
           this.syncIngredients(),
           this.syncRecipes(),
           this.syncStaff(),
@@ -524,6 +839,10 @@ class SyncService {
   public destroy() {
     if (this.timerId) {
       clearInterval(this.timerId);
+    }
+    if (this.realtimeChannel && supabase) {
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
     }
   }
 }

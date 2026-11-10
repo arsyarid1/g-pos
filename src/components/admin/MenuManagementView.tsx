@@ -68,18 +68,17 @@ export const MenuManagementView: React.FC = () => {
 
   const handleDeleteProduct = async (product: LocalProduct) => {
     if (confirm(`Yakin ingin menghapus menu "${product.name}"?`)) {
-      await db.products.delete(product.id);
-      await db.recipes.where('product_id').equals(product.id).delete();
-      syncService.pushProducts().catch(console.warn);
+      await syncService.deleteProduct(product.id);
     }
   };
 
   const handleToggleActive = async (product: LocalProduct) => {
-    await db.products.update(product.id, {
+    const updated: LocalProduct = {
+      ...product,
       is_active: !product.is_active,
       updated_at: new Date().toISOString(),
-    });
-    syncService.pushProducts().catch(console.warn);
+    };
+    await syncService.saveProduct(updated);
   };
 
   // Handle open BOM recipe modal
@@ -468,8 +467,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         updated_at: nowIso,
       };
 
-      await db.products.put(productPayload);
-      syncService.pushProducts().catch(console.warn);
+      await syncService.saveProduct(productPayload);
 
       onClose();
     } catch (err: any) {
