@@ -1,7 +1,7 @@
 -- ========================================================
--- GastroPOS Supabase Database Schema (Updated for Realtime Multi-Device)
--- Jalankan skrip ini di SQL Editor Supabase Dashboard Anda
--- Project: https://bvnykakdzxmivsdfouuc.supabase.co
+-- SKRIP LENGKAP & AMAN (ALL-IN-ONE) DATABASE POS RESTORAN
+-- Jalankan skrip ini di SQL Editor Supabase Dashboard:
+-- https://supabase.com/dashboard/project/bvnykakdzxmivsdfouuc/sql/new
 -- ========================================================
 
 -- 1. Table: restaurant_settings (White-label Branding)
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.restaurant_settings (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Table: products (Katalog Menu)
+-- 2. Table: products (Katalog Menu Lengkap)
 CREATE TABLE IF NOT EXISTS public.products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Pastikan kolom baru tetap ada jika tabel products dibuat dari skema lama
+-- Tambah kolom jika tabel dibuat dari versi lama
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS has_variants BOOLEAN DEFAULT false;
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Pastikan kolom baru tetap ada jika tabel orders dibuat dari skema lama
+-- Tambah kolom jika tabel dibuat dari versi lama
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS customer_name TEXT;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS subtotal NUMERIC(12,2) DEFAULT 0;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS tax NUMERIC(12,2) DEFAULT 0;
@@ -141,50 +141,32 @@ ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items DISABLE ROW LEVEL SECURITY;
 
 -- ========================================================
--- 9. Aktifkan Supabase Realtime Publication untuk Multi-Device
+-- 9. Daftarkan tabel ke Realtime Publication Supabase
 -- ========================================================
 DO $$
 BEGIN
-    -- Tambahkan tabel ke publication realtime jika belum terdaftar
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'products'
-    ) THEN
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'orders'
-    ) THEN
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'ingredients'
-    ) THEN
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.ingredients;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'product_recipes'
-    ) THEN
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.product_recipes;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'restaurant_settings'
-    ) THEN
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.restaurant_settings;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'staff'
-    ) THEN
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.staff;
-    END IF;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 END $$;
