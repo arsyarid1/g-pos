@@ -303,6 +303,14 @@ src/
      - 🔒 **"Keluar"** ➔ Mengunci sesi admin dan kembali ke halaman login.
    - Saat Admin berada di layar Kasir atau Dapur, tersedia tombol **"Kembali ke Admin"** untuk kembali ke Back-Office tanpa perlu memasukkan PIN ulang.
 
+### Versi 1.7.1 (Perbaikan Keamanan Supabase Browser: Mengatasi Error Forbidden Secret API)
+1. **Pemisahan Kunci Supabase Browser vs Secret Key (`src/lib/supabase.ts` & `.env`):**
+   - Mengatasi error HTTP 403 `forbidden use of secret API` yang muncul saat browser mengirimkan `sb_secret_...` di header API.
+   - Sesuai standar arsitektur Supabase, runtime browser (client-side) secara ketat dibatasi hanya menggunakan **Publishable / Anon Key** (`sb_publishable_...`).
+   - Membersihkan pemanggilan `VITE_SUPABASE_SECRET_KEY` dari kode Vite client bundle.
+2. **Pedoman Akses Row Level Security (RLS) Supabase:**
+   - Menyediakan query SQL cepat di `supabase-schema.sql` untuk menonaktifkan atau mengatur izin publik RLS (`ALTER TABLE ... DISABLE ROW LEVEL SECURITY;`) agar sinkronisasi kasir offline-first dapat berjalan tanpa hambatan otentikasi auth pengguna.
+
 ### Versi 1.4.1 (Otomatisasi Favicon & Title Browser Berbasis Logo Resto)
 1. **Engine Favicon Otomatis (`src/lib/favicon.ts`):**
    - Setiap kali logo restoran diunggah atau diganti (baik dari Cloud Storage maupun IndexedDB lokal), sistem secara otomatis memproses logo tersebut menjadi **Favicon Tab Browser**.

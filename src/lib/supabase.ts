@@ -1,9 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-// Gunakan secret key jika disediakan untuk hak akses penuh POS (bypass RLS), atau fallback ke publishable/anon key
+// Gunakan publishable/anon key untuk browser client (secret key dilarang oleh Supabase WAF di browser)
 const supabaseKey =
-  import.meta.env.VITE_SUPABASE_SECRET_KEY ||
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   '';
