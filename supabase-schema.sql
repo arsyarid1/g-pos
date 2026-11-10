@@ -96,28 +96,12 @@ CREATE TABLE IF NOT EXISTS public.order_items (
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id);
 
 -- ========================================================
--- 8. Kebijakan Row Level Security (RLS) untuk Akses Penuh
+-- 8. Row Level Security (RLS) Dinonaktifkan untuk POS Offline-First
 -- ========================================================
-ALTER TABLE public.restaurant_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ingredients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.product_recipes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Public full access restaurant_settings" ON public.restaurant_settings;
-DROP POLICY IF EXISTS "Public full access products" ON public.products;
-DROP POLICY IF EXISTS "Public full access ingredients" ON public.ingredients;
-DROP POLICY IF EXISTS "Public full access product_recipes" ON public.product_recipes;
-DROP POLICY IF EXISTS "Public full access staff" ON public.staff;
-DROP POLICY IF EXISTS "Public full access orders" ON public.orders;
-DROP POLICY IF EXISTS "Public full access order_items" ON public.order_items;
-
-CREATE POLICY "Public full access restaurant_settings" ON public.restaurant_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access products" ON public.products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access ingredients" ON public.ingredients FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access product_recipes" ON public.product_recipes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access staff" ON public.staff FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access orders" ON public.orders FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access order_items" ON public.order_items FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE public.restaurant_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ingredients DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_recipes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staff DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_items DISABLE ROW LEVEL SECURITY;
