@@ -303,6 +303,16 @@ src/
      - 🔒 **"Keluar"** ➔ Mengunci sesi admin dan kembali ke halaman login.
    - Saat Admin berada di layar Kasir atau Dapur, tersedia tombol **"Kembali ke Admin"** untuk kembali ke Back-Office tanpa perlu memasukkan PIN ulang.
 
+### Versi 1.8.2 (Perbaikan Sinkronisasi Real-Time Identitas Resto, Auto-Save Logo & Storage Bucket)
+1. **Pencegahan Race Condition Form & Auto-Save Logo (`RestaurantSettingsView.tsx`):**
+   - Menambahkan pelindung `isFormDirty` agar input nama atau logo yang sedang diunggah tidak ter-reset otomatis oleh polling latar belakang (*background sync*).
+   - Pengunggahan logo baru atau penghapusan logo kini langsung otomatis tersimpan (*auto-save*) ke IndexedDB dan Supabase Cloud, memicu event broadcast real-time ke semua perangkat secara instan tanpa resiko lupa klik simpan.
+2. **Penyelarasan Single-Tenant ID Settings (`src/services/syncService.ts`):**
+   - Menyimpan `activeSettingsId` dinamis dari baris aktif di Supabase sehingga perintah simpan (`pushSettings`) selalu menimpa baris yang sama, mencegah konflik baris duplikat yang sebelumnya menyebabkan logo kembali kosong.
+   - Menambahkan mekanisme *auto-reconnect* otomatis pada channel WebSocket Supabase jika terjadi gangguan jaringan.
+3. **Skema Storage Bucket Publik (`supabase-schema.sql`):**
+   - Menambahkan deklarasi pembuatan bucket `restaurant-assets` (maksimal 10MB) dan policy RLS publik untuk `storage.objects` agar semua perangkat dapat mengunggah dan memuat file logo dan foto menu secara langsung dari Supabase CDN.
+
 ### Versi 1.8.1 (Optimalisasi UI Kasir POS Responsif di Layar Kecil & Tablet)
 1. **Mode Tampilan Adaptif Layar Kecil / Tablet (< 1024px) (`App.tsx` & `Cart.tsx`):**
    - Mengatasi masalah katalog menu makanan yang sebelumnya terdesak atau tidak terlihat di layar kecil / tablet portrait karena panel keranjang memakan seluruh layar.

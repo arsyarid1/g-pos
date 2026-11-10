@@ -98,7 +98,7 @@ export async function uploadRestaurantLogo(file: File): Promise<UploadImageResul
       const { error: uploadError } = await supabase.storage
         .from('restaurant-assets')
         .upload(filePath, compressedBlob, {
-          contentType: 'image/png',
+          contentType: file.type || 'image/png',
           upsert: true,
         });
 

@@ -170,3 +170,35 @@ BEGIN
     EXCEPTION WHEN duplicate_object THEN NULL;
     END;
 END $$;
+
+-- ========================================================
+-- 10. Buat Storage Bucket 'restaurant-assets' & Policy Publik
+-- ========================================================
+-- Buat bucket penyimpanan foto logo & foto menu jika belum ada
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'restaurant-assets',
+    'restaurant-assets',
+    true,
+    10485760, -- Maksimal 10MB per file
+    ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']
+)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Beri akses RLS Storage untuk public anon (upload, select, update, delete)
+DROP POLICY IF EXISTS "Public Select restaurant-assets" ON storage.objects;
+DROP POLICY IF EXISTS "Public Insert restaurant-assets" ON storage.objects;
+DROP POLICY IF EXISTS "Public Update restaurant-assets" ON storage.objects;
+DROP POLICY IF EXISTS "Public Delete restaurant-assets" ON storage.objects;
+
+CREATE POLICY "Public Select restaurant-assets" ON storage.objects
+FOR SELECT USING (bucket_id = 'restaurant-assets');
+
+CREATE POLICY "Public Insert restaurant-assets" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id = 'restaurant-assets');
+
+CREATE POLICY "Public Update restaurant-assets" ON storage.objects
+FOR UPDATE USING (bucket_id = 'restaurant-assets');
+
+CREATE POLICY "Public Delete restaurant-assets" ON storage.objects
+FOR DELETE USING (bucket_id = 'restaurant-assets');

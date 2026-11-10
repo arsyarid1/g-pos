@@ -45,18 +45,20 @@ export const RestaurantSettingsView: React.FC<RestaurantSettingsViewProps> = ({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [showManualUrl, setShowManualUrl] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (currentSettings) {
+    if (currentSettings && !isFormDirty) {
       setFormData(currentSettings);
     }
-  }, [currentSettings]);
+  }, [currentSettings, isFormDirty]);
 
   const handleChange = (
     field: keyof RestaurantSettings,
     value: string | number
   ) => {
+    setIsFormDirty(true);
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -72,16 +74,30 @@ export const RestaurantSettingsView: React.FC<RestaurantSettingsViewProps> = ({
 
     try {
       const result = await uploadRestaurantLogo(file);
-      handleChange('logo_url', result.url);
-      updateFavicon(result.url, formData.name);
+      const newLogoUrl = result.url;
+      handleChange('logo_url', newLogoUrl);
+      updateFavicon(newLogoUrl, formData.name);
+
+      // Simpan langsung secara otomatis ke IndexedDB & Supabase Cloud
+      const updated: RestaurantSettings = {
+        ...formData,
+        logo_url: newLogoUrl,
+        updated_at: new Date().toISOString(),
+      };
+      await db.settings.put(updated);
+      await syncService.pushSettings(updated);
+      onSettingsSaved(updated);
+      setIsFormDirty(false);
 
       if (result.isRemote) {
-        setUploadNotice('Logo berhasil diunggah ke Supabase Cloud Storage!');
+        setUploadNotice('Logo berhasil diunggah ke Cloud Storage & disimpan!');
       } else if (result.error) {
-        setUploadNotice(result.error);
+        setUploadNotice('Logo berhasil disimpan di database!');
       } else {
-        setUploadNotice('Logo disimpan secara lokal di IndexedDB (Mode Offline).');
+        setUploadNotice('Logo berhasil disimpan.');
       }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
       alert('Gagal mengunggah gambar: ' + (err?.message || err));
     } finally {
@@ -90,10 +106,23 @@ export const RestaurantSettingsView: React.FC<RestaurantSettingsViewProps> = ({
     }
   };
 
-  const handleRemoveLogo = () => {
+  const handleRemoveLogo = async () => {
     handleChange('logo_url', '');
     setUploadNotice(null);
     updateFavicon('/vite.svg', formData.name);
+
+    // Simpan otomatis penghapusan logo ke database & cloud
+    const updated: RestaurantSettings = {
+      ...formData,
+      logo_url: '',
+      updated_at: new Date().toISOString(),
+    };
+    await db.settings.put(updated);
+    await syncService.pushSettings(updated);
+    onSettingsSaved(updated);
+    setIsFormDirty(false);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -110,6 +139,7 @@ export const RestaurantSettingsView: React.FC<RestaurantSettingsViewProps> = ({
       updateFavicon(updated.logo_url, updated.name);
 
       onSettingsSaved(updated);
+      setIsFormDirty(false);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {

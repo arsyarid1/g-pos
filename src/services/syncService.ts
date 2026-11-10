@@ -28,6 +28,7 @@ class SyncService {
   private listeners: Set<SyncListener> = new Set();
   private timerId: number | null = null;
   private realtimeChannel: RealtimeChannel | null = null;
+  private activeSettingsId: string | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -199,6 +200,7 @@ class SyncService {
           async (payload) => {
             const d = payload.new as any;
             if (d && d.name) {
+              this.activeSettingsId = d.id;
               const settings: RestaurantSettings = {
                 id: 'default_settings',
                 name: d.name || DEFAULT_SETTINGS.name,
@@ -225,6 +227,13 @@ class SyncService {
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             console.log('[Realtime] Terhubung ke Supabase Realtime channel.');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.warn('[Realtime] Channel status:', status, '- menjadwalkan reconnect...');
+            setTimeout(() => {
+              if (navigator.onLine) {
+                this.initRealtime();
+              }
+            }, 5000);
           }
         });
     } catch (err) {
@@ -243,6 +252,7 @@ class SyncService {
       const { data, error } = await supabase
         .from('restaurant_settings')
         .select('*')
+        .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -252,6 +262,7 @@ class SyncService {
       }
 
       if (data) {
+        this.activeSettingsId = data.id;
         const settings: RestaurantSettings = {
           id: 'default_settings',
           name: data.name || DEFAULT_SETTINGS.name,
@@ -283,8 +294,20 @@ class SyncService {
 
     if (isSupabaseConfigured && supabase && navigator.onLine) {
       try {
-        const payload = {
-          id: SETTINGS_UUID,
+        let targetId = this.activeSettingsId;
+        if (!targetId) {
+          const { data: rows } = await supabase
+            .from('restaurant_settings')
+            .select('id')
+            .order('updated_at', { ascending: false })
+            .limit(1);
+          if (rows && rows.length > 0) {
+            targetId = rows[0].id;
+            this.activeSettingsId = targetId;
+          }
+        }
+
+        const payload: any = {
           name: settings.name,
           tagline: settings.tagline || '',
           address: settings.address || '',
@@ -294,8 +317,21 @@ class SyncService {
           tax_percentage: settings.tax_percentage,
           updated_at: new Date().toISOString(),
         };
-        const { error } = await supabase.from('restaurant_settings').upsert(payload);
+
+        if (targetId) {
+          payload.id = targetId;
+        }
+
+        const { data: savedData, error } = await supabase
+          .from('restaurant_settings')
+          .upsert(payload)
+          .select('id')
+          .maybeSingle();
+
         if (error) throw error;
+        if (savedData?.id) {
+          this.activeSettingsId = savedData.id;
+        }
       } catch (err: any) {
         console.warn('[Sync] Gagal push settings ke Supabase:', err?.message || err);
       }
