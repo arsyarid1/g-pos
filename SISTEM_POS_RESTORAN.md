@@ -303,6 +303,14 @@ src/
      - 🔒 **"Keluar"** ➔ Mengunci sesi admin dan kembali ke halaman login.
    - Saat Admin berada di layar Kasir atau Dapur, tersedia tombol **"Kembali ke Admin"** untuk kembali ke Back-Office tanpa perlu memasukkan PIN ulang.
 
+### Versi 1.8.1 (Optimalisasi UI Kasir POS Responsif di Layar Kecil & Tablet)
+1. **Mode Tampilan Adaptif Layar Kecil / Tablet (< 1024px) (`App.tsx` & `Cart.tsx`):**
+   - Mengatasi masalah katalog menu makanan yang sebelumnya terdesak atau tidak terlihat di layar kecil / tablet portrait karena panel keranjang memakan seluruh layar.
+   - **Segmented Tab Switcher di Header:** Kasir di tablet/smartphone dapat beralih antara tab **"Menu Makanan"** dan tab **"Pesanan (X Item)"** dengan mulus.
+   - **Floating Bottom Cart Summary Bar:** Saat kasir memilih menu di layar kecil, bilah ringkasan mengambang muncul di bawah layar menampilkan total item dan harga belanja, dilengkapi tombol *"Lihat Pesanan"* untuk beralih ke keranjang.
+   - **Tombol Navigasi Cepat di Keranjang:** Menambahkan tombol *"⬅ Menu"* di header keranjang pada layar kecil agar kasir dapat kembali ke daftar menu dengan satu sentuhan.
+   - **Dukungan Layar Lebar (Desktop/Laptop):** Tampilan tetap split-screen berdampingan (Menu di kiri, Keranjang di kanan) tanpa mengubah alur kerja kasir desktop.
+
 ### Versi 1.8.0 (Sinkronisasi Real-Time Multi-Device Berbasis Supabase WebSocket)
 1. **Engine Supabase Realtime Channels (`src/services/syncService.ts`):**
    - Menghubungkan aplikasi ke channel WebSocket Supabase `pos-multi-device-sync`.

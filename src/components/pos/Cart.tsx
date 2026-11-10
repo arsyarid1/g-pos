@@ -9,6 +9,7 @@ import {
   Minus,
   MessageSquare,
   ArrowRight,
+  ArrowLeft,
   User,
   Hash,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ interface CartProps {
   onClearCart: () => void;
   onOpenCheckout: () => void;
   taxPercentage?: number;
+  onBackToMenu?: () => void;
 }
 
 export const Cart: React.FC<CartProps> = ({
@@ -43,6 +45,7 @@ export const Cart: React.FC<CartProps> = ({
   onClearCart,
   onOpenCheckout,
   taxPercentage = 10,
+  onBackToMenu,
 }) => {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
@@ -61,6 +64,17 @@ export const Cart: React.FC<CartProps> = ({
       <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50/70">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {onBackToMenu && (
+              <button
+                type="button"
+                onClick={onBackToMenu}
+                className="lg:hidden p-1.5 -ml-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded-xl transition cursor-pointer flex items-center gap-1 text-xs font-bold"
+                title="Kembali ke Daftar Menu"
+              >
+                <ArrowLeft className="w-4 h-4 text-orange-600" />
+                <span>Menu</span>
+              </button>
+            )}
             <h3 className="font-bold text-slate-800 text-base">Pesanan Aktif</h3>
             {totalItemCount > 0 && (
               <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">
