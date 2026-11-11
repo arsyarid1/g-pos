@@ -303,6 +303,17 @@ src/
      - 🔒 **"Keluar"** ➔ Mengunci sesi admin dan kembali ke halaman login.
    - Saat Admin berada di layar Kasir atau Dapur, tersedia tombol **"Kembali ke Admin"** untuk kembali ke Back-Office tanpa perlu memasukkan PIN ulang.
 
+### Versi 1.8.3 (Redesain Navigasi Mobile Back-Office & Header Responsif)
+1. **Navigasi Mobile Ergonomis (Bottom Navigation Bar) (`AdminDashboard.tsx`):**
+   - Menggantikan baris tab horizontal yang sebelumnya terpotong dan memunculkan scrollbar jelek di layar HP/smartphone dengan **Bottom Navigation Bar** yang selalu fixed di bawah layar (`md:hidden fixed bottom-0`).
+   - Menyediakan 5 tombol sentuh ramah jempol (*thumb-friendly*) dengan ikon dan label ringkas: **Ringkasan**, **Menu**, **Bahan**, **Staf**, dan **Pengaturan**.
+   - Menambahkan ruang bantalan bawah (`pb-24 md:pb-8`) pada seluruh area konten Admin sehingga tabel transaksi, form input, dan tombol aksi tidak pernah tertutup oleh bilah navigasi bawah.
+   - Pada layar laptop/desktop (`>= md`), tata letak bilah samping kiri vertikal (*sidebar*) tetap dipertahankan dengan rapi.
+2. **Pembersihan & Penataan Header Mobile (`AdminDashboard.tsx` & `KitchenDashboard.tsx`):**
+   - Menghilangkan tabrakan antara logo, nama resto, badge "Back-Office", tombol "Kasir POS", "Layar Dapur", dan "Keluar" di layar sempit (< 450px).
+   - Membatasi lebar teks judul (`max-w-[120px] truncate`), meletakkan caption "Back-Office" di baris kedua, dan meringkas label tombol aksi di layar kecil.
+   - Mengubah filter rentang waktu pada `AdminOverviewView.tsx` menjadi grid 4-kolom yang proporsional di mobile.
+
 ### Versi 1.8.2 (Perbaikan Sinkronisasi Real-Time Identitas Resto, Auto-Save Logo & Storage Bucket)
 1. **Pencegahan Race Condition Form & Auto-Save Logo (`RestaurantSettingsView.tsx`):**
    - Menambahkan pelindung `isFormDirty` agar input nama atau logo yang sedang diunggah tidak ter-reset otomatis oleh polling latar belakang (*background sync*).

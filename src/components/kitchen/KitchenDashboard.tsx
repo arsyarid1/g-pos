@@ -87,32 +87,35 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 font-sans text-slate-900">
-      {/* Top Application Bar Khusus Dapur (Light Mode Modern) */}
-      <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between z-20 shrink-0 shadow-2xs">
+      {/* Top Application Bar Khusus Dapur (Light Mode Modern & Responsif) */}
+      <header className="h-16 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between z-20 shrink-0 shadow-2xs">
         {/* Left: Brand & Title */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {settings?.logo_url ? (
             <img
               src={settings.logo_url}
               alt={settings.name}
-              className="w-10 h-10 object-contain border-0 shadow-none bg-transparent"
+              className="w-9 h-9 sm:w-10 sm:h-10 object-contain border-0 shadow-none bg-transparent shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-linear-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
               <ChefHat className="w-5 h-5 stroke-2" />
             </div>
           )}
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-extrabold text-base sm:text-lg tracking-tight text-slate-900">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="font-extrabold text-sm sm:text-lg tracking-tight text-slate-900 truncate max-w-[100px] sm:max-w-[180px]">
                 {settings?.name || 'Gastro Resto'}
               </h1>
-              <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <span className="hidden sm:inline-block text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
                 Layar Dapur (KDS)
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">
+            <p className="text-[10px] text-emerald-700 font-bold sm:hidden leading-none mt-0.5">
+              Layar Dapur
+            </p>
+            <p className="text-[11px] text-slate-400 hidden sm:block mt-0.5">
               {currentStaff ? `Staf Masak: ${currentStaff.name}` : 'Kitchen Display System'}
             </p>
           </div>
@@ -123,14 +126,16 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('orders')}
-            className={`px-3.5 py-1.5 rounded-xl transition flex items-center gap-2 cursor-pointer ${
+            className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeTab === 'orders'
                 ? 'bg-white text-emerald-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <ChefHat className="w-4 h-4 text-emerald-600" />
-            <span>Tiket Pesanan</span>
+            <ChefHat className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+            <span className="text-[11px] sm:text-xs">
+              <span className="hidden sm:inline">Tiket </span>Pesanan
+            </span>
             {counts.active > 0 && (
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-black animate-pulse">
                 {counts.active}
@@ -141,29 +146,32 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('inventory')}
-            className={`px-3.5 py-1.5 rounded-xl transition flex items-center gap-2 cursor-pointer ${
+            className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeTab === 'inventory'
                 ? 'bg-white text-emerald-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Boxes className="w-4 h-4 text-emerald-600" />
-            <span>Stok Bahan Baku</span>
+            <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+            <span className="text-[11px] sm:text-xs">
+              <span className="hidden sm:inline">Stok </span>Bahan
+            </span>
           </button>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Jika admin yang sedang meninjau dapur, berikan tombol kembali ke dashboard */}
           {isAdmin && onReturnToAdmin && (
             <button
               type="button"
               onClick={onReturnToAdmin}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 transition cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 transition cursor-pointer shadow-xs"
               title="Kembali ke Back-Office Admin"
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>Kembali ke Admin</span>
+              <span>Admin</span>
+              <span className="hidden sm:inline">Dashboard</span>
             </button>
           )}
 
@@ -171,8 +179,8 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           <button
             type="button"
             onClick={onLogout}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 text-xs font-semibold transition border border-slate-200 cursor-pointer"
-            title="Keluar dari sesi dapur ke halaman login"
+            className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-semibold text-xs border border-slate-200 transition cursor-pointer"
+            title="Keluar dari akun dapur"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Keluar</span>
